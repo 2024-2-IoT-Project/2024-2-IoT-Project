@@ -9,7 +9,7 @@ mp_face_mesh = mp.solutions.face_mesh
 # 0: 노트북 내장 카메라
 # 1: usb 연결한 카메라
 # 라즈베리파이의 경우 수정 필요
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 # FaceMesh 객체 생성
 with mp_face_mesh.FaceMesh(
