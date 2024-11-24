@@ -24,6 +24,7 @@ class GameServer:
         self.users: Dict[str, User] = {}  # 사용자 관리 (userID: User 객체)
         self.expected_user_count = 0  # 입력받은 유저 수
         self.is_game_running = threading.Event()  # 게임 상태를 관리하는 Event
+        self.lock = threading.Lock()  # 스레드 동기화를 위한 Lock
 
     def accept_clients(self):
         """클라이언트 접속 대기"""
@@ -50,39 +51,68 @@ class GameServer:
                 print("[ERROR] 숫자를 입력하세요.")
 
         print(f"[INFO] 설정된 유저 수: {self.expected_user_count}")
-        print("[INFO] QR 코드로 유저를 등록해주세요.")
+        print("[INFO] QR 코드로 유저를 등록하거나 테스트 용도로 자동 생성 중입니다...")
 
-        # 유저 수를 모든 클라이언트에 전송
-        for client in self.clients:
-            try:
-                client.send(f"SETUP: {self.expected_user_count}".encode())
-                print(f"[INFO] 클라이언트에 유저 수 전송: SETUP: {self.expected_user_count}")
-            except socket.error:
-                print(f"[ERROR] 클라이언트에게 유저 수 전송 실패")
+        # 테스트용으로 자동으로 사용자 객체 생성
+        for i in range(1, self.expected_user_count + 1):
+            user_id = str(i)  # User ID를 숫자로 사용
+            if user_id not in self.users:
+                self.users[user_id] = User(user_id)  # User 객체 생성
+                print(f"[INFO] 테스트용 사용자 {user_id} 생성 완료. [ {self.users[user_id]} ]")
 
-        # QR 코드로 유저 등록
-        while len(self.users) < self.expected_user_count:
-            for client in self.clients:
-                try:
-                    data = client.recv(BUFFER_SIZE).decode().strip()
-                    if data.startswith("user") and data[4:].isdigit():
-                        if data not in self.users:
-                            self.users[data] = User(data)
-                            print(f"[INFO] {data} 사용자 등록 완료.")
-                            client.send(f"User {data} created".encode())
-                        else:
-                            client.send(f"ERROR: {data} already exists".encode())
-                    else:
-                        client.send("ERROR: Invalid user format".encode())
-                except socket.error:
-                    print(f"[ERROR] 클라이언트와 통신 중 오류 발생")
+        # QR 코드로 유저 등록 (주석처리된 코드)
+        # while len(self.users) < self.expected_user_count:
+        #     for client in self.clients:
+        #         try:
+        #             data = client.recv(BUFFER_SIZE).decode().strip()
+        #             # 숫자만 포함된 데이터를 유저로 등록
+        #             if data.isdigit():
+        #                 user_id = data  # 숫자를 그대로 user_id로 사용
+        #                 if user_id not in self.users:
+        #                     self.users[user_id] = User(user_id)  # User 객체 생성
+        #                     print(f"[INFO] {user_id} 사용자 등록 완료.")
+        #                     client.send(f"User {user_id} created".encode())
+        #                 else:
+        #                     client.send(f"ERROR: {user_id} already exists".encode())
+        #             else:
+        #                 client.send("ERROR: Invalid user format".encode())
+        #         except socket.error:
+        #             print(f"[ERROR] 클라이언트와 통신 중 오류 발생")
 
         print("[INFO] 모든 유저가 등록되었습니다.")
+
+    def handle_client_message(self, client: socket.socket):
+        """클라이언트로부터 메시지를 처리"""
+        while True:
+            try:
+                data = client.recv(BUFFER_SIZE).decode().strip()
+                if not data:
+                    break
+
+                print(f"[INFO] 클라이언트 메시지: {data}")
+
+                # PLAYER_CHECK 처리
+                if data.startswith("PLAYER_CHECK:"):
+                    user_id = data.split(":")[1]
+                    if user_id in self.users:
+                        user = self.users[user_id]
+                        is_available = "true" if user.hp > 0 else "false"
+                        client.send(f"MISSION_AVAILABLE:{is_available}".encode())
+                    else:
+                        client.send(f"ERROR: User {user_id} does not exist".encode())
+            except socket.error:
+                print(f"[ERROR] 클라이언트와 통신 중 오류 발생")
+                break
 
     def start_game(self):
         """게임 시작"""
         print("[INFO] 게임 시작!")
         self.is_game_running.set()  # 게임 상태를 활성화
+
+        # 클라이언트 메시지 처리 스레드 시작
+        for client in self.clients:
+            threading.Thread(target=self.handle_client_message, args=(client,), daemon=True).start()
+
         threading.Thread(target=self.send_mission_messages, daemon=True).start()
 
     def send_mission_messages(self):
@@ -97,19 +127,28 @@ class GameServer:
                     with self.lock:
                         self.clients.remove(random_client)
             
-            # 랜덤 간격 대기
-            wait_time = random.uniform(5, 10)
-            for _ in range(int(wait_time * 10)):  # 0.1초씩 체크하며 대기
-                if not self.is_game_running.is_set():
-                    return
-                time.sleep(0.1)
-
+            time.sleep(random.uniform(10, 20))
 
     def end_game(self):
         """게임 종료"""
         print("[INFO] 게임 종료!")
         self.is_game_running.clear()  # 게임 상태를 비활성화
 
+        # 모든 유저 상태 출력
+        print("\n[INFO] 게임 종료 시점의 유저 상태:")
+        for user_id, user in self.users.items():
+            print(f"  - {user}")  # User 클래스의 __str__ 메서드로 출력
+
+        # 포인트 기준으로 우승자 계산
+        max_point = max(user.point for user in self.users.values())
+        winners = [user_id for user_id, user in self.users.items() if user.point == max_point]
+
+        if len(winners) == 1:
+            print(f"[INFO] 우승자: User{winners[0]} (Point: {max_point})")
+        else:
+            print(f"[INFO] 동점입니다. 동점 유저: {', '.join(winners)}")
+
+        # 모든 클라이언트 종료 메시지 전송
         for client in self.clients:
             try:
                 client.send("GAME_OVER".encode())
@@ -117,8 +156,9 @@ class GameServer:
             except:
                 pass
 
-        self.server_socket.close()
+        self.server_socket.close()                              
 
+    
     def start(self):
         """서버 시작"""
         print("[INFO] 서버를 시작합니다.")
@@ -127,7 +167,7 @@ class GameServer:
         self.start_game()
 
         # 게임 종료를 위한 타이머
-        threading.Timer(20.0, self.end_game).start()
+        threading.Timer(10.0, self.end_game).start()
 
 
 if __name__ == "__main__":
