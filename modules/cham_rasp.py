@@ -8,19 +8,19 @@ import random
 SERVER_HOST = '59.187.203.169'  # 서버 IP. 추후 mDNS적용해보기.
 SERVER_PORT = 1234
 
-# client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# client.connect((SERVER_HOST, SERVER_PORT))
-# print("[INFO] 서버 연결됨.")
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect((SERVER_HOST, SERVER_PORT))
+print("[INFO] 서버 연결됨.")
 
 try:
     # 게임 시작 요청
-    # client.send("START_GAME".encode())
+    client.send("START_GAME".encode())
 
     while True:
-        # message = client.recv(1024).decode()
+        message = client.recv(1024).decode()
 
-        # if message.startswith("START_MISSION"):
-        if True:
+        if message.startswith("START_MISSION"):
+        # if True:
             # TODO 미션을 받은 경우 LED 등을 켜는 등 게임이 가능함을 알려야 하지 않나?
             print("[INFO] 미션 시작 수신")
 
@@ -34,13 +34,13 @@ try:
             # qr 인식 후 사용자 식별해서 서버에 게임 가능 여부 조회
             player = recognize_qr_code(cap)
             print(player)
-            # client.send(f"PLAYER_CHECK:{player}".encoder())
+            client.send(f"PLAYER_CHECK:{player}".encode())
 
             # 게임 가능 여부 조회하고 결과 받을 때까지 대기
             while True:
-                # message = client.recv(1024).decode()
-                # if message.startswith("MISSION_AVAILABLE") and message.split(":")[1] == "true":
-                if True:
+                message = client.recv(1024).decode()
+                if message.startswith("MISSION_AVAILABLE") and message.split(":")[1] == "true":
+                # if True:
                     # TODO 게임 실행 및 결과 전송
 
                     # 랜덤으로 진행할 게임 결정
@@ -51,13 +51,13 @@ try:
                         game_result = cham_game(cap)
                         
                         if game_result == "Center":
-                            # client.send(f"MISISION_RESULT:cham {player} wrong")
+                            client.send(f"MISISION_RESULT:cham {player} wrong".encode())
                             print("center")
                         elif game_result == "Left":
-                            # client.send(f"MISSION_REUSLT:chame {player} correct")
+                            client.send(f"MISSION_REUSLT:cham {player} correct".encode())
                             print("left")
                         elif game_result == "Right":
-                            # client.send(f"MISSION_REUSLT:chame {player} wrong")
+                            client.send(f"MISSION_REUSLT:cham {player} wrong".encode())
                             print("right")
                         break
                     # else:
@@ -81,7 +81,7 @@ except Exception as e:
     print(f"[ERROR] 클라이언트 에러: {e}")
 finally:
     try:
-        # client.close()
+        client.close()
         pass
     except:
         pass
