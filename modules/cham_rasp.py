@@ -50,14 +50,15 @@ try:
                     if game_choice == 0:
                         game_result = cham_game(cap)
                         
+                        # TODO 지금은 우선 왼쪽만 성공으로 설정함 추후 수정
                         if game_result == "Center":
-                            client.send(f"MISISION_RESULT:cham {player} wrong".encode())
+                            client.send(f"MISSION_RESULT: cham {player} wrong".encode())
                             print("center")
                         elif game_result == "Left":
-                            client.send(f"MISSION_REUSLT:cham {player} correct".encode())
+                            client.send(f"MISSION_RESULT: cham {player} correct".encode())
                             print("left")
                         elif game_result == "Right":
-                            client.send(f"MISSION_REUSLT:cham {player} wrong".encode())
+                            client.send(f"MISSION_RESULT: cham {player} wrong".encode())
                             print("right")
                         break
                     # else:
@@ -68,14 +69,10 @@ try:
                     print("[ERROR] 사용자의 체력이 회복되지 않아 게임을 실행할 수 없습니다.")
                     break
 
-                break
-
         elif message == "GAME_OVER":
             print("[INFO] 게임 종료 신호 수신.")
             client.close()
             break
-        
-        break
 
 except Exception as e:
     print(f"[ERROR] 클라이언트 에러: {e}")
