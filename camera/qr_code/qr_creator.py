@@ -4,10 +4,10 @@ import qrcode
 def create_qr_code(user_id, filename="qr_code.png"):
     # QR 코드에 포함할 사용자 정보
     user_data = {
-    "player1": "P1",
-    "player2": "P2",
-    "player3": "P3",
-    "player4": "P4"
+    "player1": "1",
+    "player2": "2",
+    "player3": "3",
+    "player4": "4"
     }
     
     # 사용자 구분 데이터 확인

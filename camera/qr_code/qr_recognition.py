@@ -4,9 +4,9 @@ import numpy as np
 
 # 사용자를 구분할 예시 데이터
 user_data = {
-    "player1": "P1",
-    "player2": "P2",
-    "player3": "P3"
+    "player1": "1",
+    "player2": "2",
+    "player3": "3"
 }
 
 # 결과를 저장할 파일 경로
