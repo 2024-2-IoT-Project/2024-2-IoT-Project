@@ -8,7 +8,7 @@ from user import User  # user.py에서 User 클래스를 가져옴
 # 서버 설정
 HOST = '0.0.0.0'  # 모든 네트워크 인터페이스에서 요청 수신
 PORT = 1234        # 포트 번호
-MAX_CLIENTS = 1    # 최대 클라이언트 수 (미션 개수, 테스트 시 1)
+MAX_CLIENTS = 1 # 최대 클라이언트 수 (미션 개수, 테스트 시 1)
 BUFFER_SIZE = 1024  # 소켓 수신 버퍼 크기
 CHECK_INTERVAL = 1  # 클라이언트 접속 확인 간격
 
@@ -25,17 +25,35 @@ class GameServer:
         self.expected_user_count = 0  # 입력받은 유저 수
         self.is_game_running = threading.Event()  # 게임 상태를 관리하는 Event
         self.lock = threading.Lock()  # 스레드 동기화를 위한 Lock
+        self.active_missions = set()  # 현재 미션 중인 클라이언트 소켓
+        self.base_client: socket.socket = None  # 거점 클라이언트
 
     def accept_clients(self):
-        """클라이언트 접속 대기"""
+        """클라이언트 접속 대기 및 거점 클라이언트 설정"""
         print("[INFO] 클라이언트 접속 대기 중...")
         while len(self.clients) < MAX_CLIENTS:
             client_socket, addr = self.server_socket.accept()
             print(f"[INFO] 새로운 클라이언트 접속: {addr}")
             self.clients.append(client_socket)
 
+            # 클라이언트로부터 초기 메시지를 수신하여 거점 클라이언트 설정
+            try:
+                data = client_socket.recv(BUFFER_SIZE).decode().strip()
+                print(f"[INFO] 클라이언트 초기 메시지: {data}")
+
+                if data == "SET_BASE":
+                    with self.lock:
+                        self.base_client = client_socket
+                        print(f"[INFO] 거점 클라이언트로 설정: {addr}")
+                        client_socket.send("BASE_SET_SUCCESS".encode())
+                else:
+                    print(f"[INFO] 일반 클라이언트로 등록: {addr}")
+            except socket.error as e:
+                print(f"[ERROR] 클라이언트 초기 메시지 처리 중 오류 발생: {e}")
+
         print(f"[INFO] {MAX_CLIENTS}개의 클라이언트가 접속했습니다.")
         print("[INFO] 이제 유저 등록 단계로 진행합니다...")
+
 
     def register_users(self):
         """유저 수 입력 및 QR 코드로 유저 등록"""
@@ -61,7 +79,7 @@ class GameServer:
                 print(f"[ERROR] 클라이언트에게 유저 수 전송 실패")
         print("[INFO] QR 코드로 유저를 등록하거나 테스트 용도로 자동 생성 중입니다...")
 
-        # # 테스트용으로 자동으로 사용자 객체 생성
+        # 테스트용으로 자동으로 사용자 객체 생성
         # for i in range(1, self.expected_user_count + 1):
         #     user_id = str(i)  # User ID를 숫자로 사용
         #     if user_id not in self.users:
@@ -78,7 +96,7 @@ class GameServer:
                         user_id = data  # 숫자를 그대로 user_id로 사용
                         if user_id not in self.users:
                             self.users[user_id] = User(user_id)  # User 객체 생성
-                            print(f"[INFO] {user_id} 사용자 등록 완료.")
+                            print(f"[INFO] User {user_id} 생성 완료. [ {self.users[user_id]} ]")
                             client.send(f"User {user_id} created".encode())
                         else:
                             client.send(f"ERROR: {user_id} already exists".encode())
@@ -88,6 +106,8 @@ class GameServer:
                     print(f"[ERROR] 클라이언트와 통신 중 오류 발생")
 
         print("[INFO] 모든 유저가 등록되었습니다.")
+        
+        
 
     def handle_client_message(self, client: socket.socket):
         """클라이언트로부터 메시지를 처리"""
@@ -95,9 +115,18 @@ class GameServer:
             try:
                 data = client.recv(BUFFER_SIZE).decode().strip()
                 if not data:
+                    print("[INFO] 클라이언트 연결 종료")
                     break
 
-                print(f"[INFO] 클라이언트 메시지: {data}")
+                print(f"[INFO] 클라이언트 메시지: {data}")  # 메시지 디버깅 출력
+                
+                # 거점 클라이언트 설정
+                if data == "SET_BASE":
+                    with self.lock:
+                        self.base_client = client
+                        print(f"[INFO] 거점 클라이언트로 설정: {client.getpeername()}")
+                        client.send("BASE_SET_SUCCESS".encode())
+                    continue
 
                 # PLAYER_CHECK 처리
                 if data.startswith("PLAYER_CHECK:"):
@@ -114,17 +143,55 @@ class GameServer:
                     user_id = data.split(":")[1]
                     if user_id in self.users:
                         user = self.users[user_id]
-                        user.hp = 1  # HP를 1로 설정
-                        print(f"[INFO] {user_id}의 HP가 회복되었습니다.")
-                        client.send(f"HEAL_SUCCESS:{user_id}".encode())
+                        if user.hp == 1:
+                            print(f"[INFO] {user_id}의 HP는 이미 1입니다. 추가 처리를 하지 않습니다.")
+                            client.send(f"HEAL_ALREADY_MAX:{user_id}".encode())
+                        else:
+                            user.hp = 1  # HP를 1로 설정
+                            print(f"[INFO] {user_id}의 HP가 회복되었습니다.")
+                            client.send(f"HEAL_SUCCESS:{user_id}".encode())
                     else:
                         client.send(f"ERROR: User {user_id} does not exist".encode())
 
-            except socket.error:
-                print(f"[ERROR] 클라이언트와 통신 중 오류 발생")
+
+                # MISSION_RESULT 처리
+                elif data.startswith("MISSION_RESULT:"):
+                    try:
+                        _, mission, user_id, result = data.split()  # 메시지 파싱
+                        print(f"[DEBUG] 파싱 결과: mission={mission}, user_id={user_id}, result={result}")
+
+                        if user_id in self.users:
+                            user = self.users[user_id]
+                            if result.lower() == "correct":
+                                user.update_point(1)  # 포인트 +1
+                                print(f"[INFO] {user_id}의 미션 성공! 포인트 +1.")
+                            elif result.lower() == "wrong":
+                                user.hp = 0  # HP를 0으로 설정
+                                print(f"[INFO] {user_id}의 미션 실패. HP가 0으로 설정됨.")
+                            else:
+                                print(f"[ERROR] 알 수 없는 결과: {result}")
+                                client.send("ERROR: Invalid result format".encode())
+                                continue
+
+                            # 유저 상태 출력
+                            print(f"[INFO] {user}")
+                            client.send(f"MISSION_RESULT_SUCCESS:{user_id}".encode())
+                        else:
+                            client.send(f"ERROR: User {user_id} does not exist".encode())
+                        # 미션 결과 처리 완료 후 클라이언트를 active_missions에서 제거
+                        with self.lock:
+                            if client in self.active_missions:
+                                self.active_missions.remove(client)
+                                print(f"[INFO] {client.getpeername()} 클라이언트의 미션 완료 상태로 변경")
+                    except Exception as e:
+                        print(f"[ERROR] MISSION_RESULT 처리 중 예외 발생: {e}")
+                        client.send("ERROR: Invalid MISSION_RESULT format".encode())
+
+            except socket.error as e:
+                print(f"[ERROR] 클라이언트와의 통신 중 오류 발생: {e}")
                 break
 
-    
+
     def start_game(self):
         """게임 시작"""
         print("[INFO] ##### 게임 시작! ##### \n")
@@ -132,24 +199,46 @@ class GameServer:
 
         # 클라이언트 메시지 처리 스레드 시작
         for client in self.clients:
-            client.send("GAME_START".encode()) # 게임 시작을 알림
+            client.send("GAME_START".encode())  # 게임 시작을 알림
+            print(f"[INFO] GAME_START 메시지 전송: {client.getpeername()}")
             threading.Thread(target=self.handle_client_message, args=(client,), daemon=True).start()
 
+        # GAME_START와 START_MISSION 메시지 사이에 지연 시간 추가
+        delay_between_messages = 3  # 지연 시간 (초)
+        print(f"[INFO] GAME_START와 START_MISSION 사이 {delay_between_messages}초 대기 중...")
+        time.sleep(delay_between_messages)
+
+        # START_MISSION 메시지 전송 스레드 시작
         threading.Thread(target=self.send_mission_messages, daemon=True).start()
 
+
     def send_mission_messages(self):
-        """랜덤으로 START_MISSION 메시지 전송"""
+        """첫 번째 클라이언트를 제외하고 START_MISSION 메시지 전송"""
         while self.is_game_running.is_set():
-            if self.clients:
-                random_client = random.choice(self.clients)
+            # 거점 클라이언트와 미션 중 클라이언트를 제외
+            eligible_clients = [
+                client for client in self.clients
+                if client != self.base_client and client not in self.active_missions
+            ]
+
+            if eligible_clients:  # 조건을 만족하는 클라이언트가 있을 때만 실행
+                random_client = random.choice(eligible_clients)
                 try:
                     random_client.send("START_MISSION".encode())
                     print("[INFO] START_MISSION 메시지 전송")
-                except socket.error:
+                    # active_missions에 추가
                     with self.lock:
-                        self.clients.remove(random_client)
+                        self.active_missions.add(random_client)
+                except socket.error:
+                    # 연결 끊긴 클라이언트 제거
+                    with self.lock:
+                        if random_client in self.clients:
+                            self.clients.remove(random_client)
+            else:
+                print("[INFO] 전송 가능한 클라이언트가 없습니다.")
             
-            time.sleep(random.uniform(10, 20))
+            time.sleep(random.uniform(5, 10))  # 5초 대기
+
 
     def end_game(self):
         """게임 종료"""
@@ -189,7 +278,7 @@ class GameServer:
         self.start_game()
 
         # 게임 종료를 위한 타이머
-        threading.Timer(20.0, self.end_game).start()
+        threading.Timer(60.0, self.end_game).start()
 
 
 if __name__ == "__main__":
