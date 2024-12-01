@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+import random
 
 def make_face_mesh():
     # MediaPipe FaceMesh 초기화
@@ -77,5 +78,9 @@ def cham_game(cap):
                     direction = "Left"
                 elif yaw < -2.5:
                     direction = "Right"
-                
-    return direction
+
+                computer_choice = random.choice(["Left", "Right"])
+                if direction != computer_choice:
+                    return True
+                else:
+                    return False
