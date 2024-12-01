@@ -142,7 +142,7 @@ def rsp_game(cap):
             if result == "draw":
                 game_state = "준비"
             else:
-                return result
+                return result == "Win"
         
         if game_state == "준비":
             image = put_text(image, "가위바위보 준비!", (10, 30), 30, (255, 0, 0))
