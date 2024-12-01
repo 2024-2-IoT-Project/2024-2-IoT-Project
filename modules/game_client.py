@@ -2,6 +2,7 @@ import socket
 import cv2
 from qr_recog import recognize_qr_code
 from cham_game_logic import cham_game
+from rsp_game_logic import rsp_game
 import random
 
 # 서버 설정
@@ -27,9 +28,8 @@ try:
             # 카메라 초기화 (카메라 번호는 기본값 0)
             cap = cv2.VideoCapture(0)
 
-            if not cap.isOpened():
-                print("카메라를 열 수 없습니다.")
-                # TODO 여기 처리해야 함
+            while not cap.isOpened():
+                cap = cv2.VideoCapture(0)
             
             # qr 인식 후 사용자 식별해서 서버에 게임 가능 여부 조회
             player = recognize_qr_code(cap)
@@ -44,28 +44,29 @@ try:
                     # TODO 게임 실행 및 결과 전송
 
                     # 랜덤으로 진행할 게임 결정
-                    # game_choice = random.randint(0, 1)
-                    # 지금은 우선 무조건 참참참 게임 진행하도록 저정
-                    game_choice = 0
+                    game_choice = random.randint(0, 1)
+                    
                     if game_choice == 0:
                         game_result = cham_game(cap)
                         
-                        # TODO 지금은 우선 왼쪽만 성공으로 설정함 추후 수정
-                        if game_result == "Center":
-                            client.send(f"MISSION_RESULT: cham {player} wrong".encode())
-                            print("center")
-                        elif game_result == "Left":
+                        if game_result:
                             client.send(f"MISSION_RESULT: cham {player} correct".encode())
-                            print("left")
-                        elif game_result == "Right":
+                        else:
                             client.send(f"MISSION_RESULT: cham {player} wrong".encode())
-                            print("right")
                         break
-                    # else:
+
+                    else:
                         # TODO 가위바위보 게임 로직 구현
+                        game_result = rsp_game(cap)
+                        print(game_result)
+
+                        if game_result:
+                            client.send(f"MISSION_RESULT: rsp {player} correct".encode())
+                        else:
+                            client.sned(f"MISSION_RESULT: rsp {player} wrong".encode())
 
                 else:
-                    # TODO 게임 실행 안 함
+                    # 게임 실행 안 함
                     print("[ERROR] 사용자의 체력이 회복되지 않아 게임을 실행할 수 없습니다.")
                     break
 
