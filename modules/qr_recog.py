@@ -6,7 +6,8 @@ import numpy as np
 user_data = {
     "player1": "1",
     "player2": "2",
-    "player3": "3"
+    "player3": "3",
+    "player4": "4"
 }
 
 def recognize_qr_code(cap):
