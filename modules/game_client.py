@@ -67,7 +67,7 @@ try:
                         if game_result:
                             client.send(f"MISSION_RESULT: rsp {player} correct".encode())
                         else:
-                            client.sned(f"MISSION_RESULT: rsp {player} wrong".encode())
+                            client.send(f"MISSION_RESULT: rsp {player} wrong".encode())
 
                 else:
                     # 게임 실행 안 함
