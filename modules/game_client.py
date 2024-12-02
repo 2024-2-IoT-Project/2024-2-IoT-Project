@@ -4,6 +4,9 @@ from qr_recog import recognize_qr_code
 from cham_game_logic import cham_game
 from rsp_game_logic import rsp_game
 import random
+import os
+
+os.environ["DISPLAY"] = ":0.0"
 
 # 서버 설정
 SERVER_HOST = '59.187.203.169'  # 서버 IP. 추후 mDNS적용해보기.
