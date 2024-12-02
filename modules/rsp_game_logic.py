@@ -125,7 +125,7 @@ def rsp_game(cap):
             
         elif game_state == "카운트다운":
             time_elapsed = current_time - countdown_start
-            countdown = 3 - int(time_elapsed)
+            countdown = 5 - int(time_elapsed)
 
             if countdown > 0:
                 image = put_text(image, '안 내면 진다, 가위 바위 보!' + str(countdown), (10, 50), 50, (255, 0, 0))
