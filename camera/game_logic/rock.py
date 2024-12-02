@@ -86,6 +86,9 @@ hands = mp_hands.Hands(
 
 # 웹캠 초기화
 cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)  # 프레임 너비 조정
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 800)  # 프레임 높이 조정
+cap.set(cv2.CAP_PROP_FPS, 15)  # 프레임 속도 조정
 
 def update_frame():
     global game_state, countdown_start, computer_choice, result, last_game_time
@@ -139,7 +142,7 @@ def update_frame():
     imgtk = ImageTk.PhotoImage(image=img)
     lbl_video.imgtk = imgtk
     lbl_video.configure(image=imgtk)
-    lbl_video.after(10, update_frame)
+    lbl_video.after(30, update_frame)
 
 # Tkinter 메인 루프 실행
 update_frame()
