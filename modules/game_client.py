@@ -45,10 +45,14 @@ try:
 
                     # 랜덤으로 진행할 게임 결정
                     game_choice = random.randint(0, 1)
+                    if game_choice == 0:
+                        print("play cham")
+                    else:
+                        print("play rsp")
                     
                     if game_choice == 0:
                         game_result = cham_game(cap)
-                        
+                        print("cham " + game_result)
                         if game_result:
                             client.send(f"MISSION_RESULT: cham {player} correct".encode())
                         else:
@@ -58,7 +62,7 @@ try:
                     else:
                         # TODO 가위바위보 게임 로직 구현
                         game_result = rsp_game(cap)
-                        print(game_result)
+                        print("rsp " + game_result)
 
                         if game_result:
                             client.send(f"MISSION_RESULT: rsp {player} correct".encode())
