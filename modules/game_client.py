@@ -52,7 +52,7 @@ try:
                     
                     if game_choice == 0:
                         game_result = cham_game(cap)
-                        print("cham " + game_result)
+                        print("cham " + str(game_result))
                         if game_result:
                             client.send(f"MISSION_RESULT: cham {player} correct".encode())
                         else:
@@ -62,7 +62,7 @@ try:
                     else:
                         # TODO 가위바위보 게임 로직 구현
                         game_result = rsp_game(cap)
-                        print("rsp " + game_result)
+                        print("rsp " + str(game_result))
 
                         if game_result:
                             client.send(f"MISSION_RESULT: rsp {player} correct".encode())
