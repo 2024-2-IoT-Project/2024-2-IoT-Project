@@ -24,7 +24,9 @@ def put_text(image, text, position, font_size, color):
     draw = ImageDraw.Draw(pil_image)
     
     # 폰트 설정 (맑은 고딕 또는 다른 한글 지원 폰트 경로로 변경하세요)
-    font = ImageFont.truetype("malgun.ttf", font_size)
+    font_path = "/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf"
+    font = ImageFont.truetype(font_path, font_size)
+    # font = ImageFont.truetype("malgun.ttf", font_size)
     
     # 텍스트 추가
     draw.text(position, text, font=font, fill=color)
@@ -91,6 +93,7 @@ def make_hands():
 
 
 def rsp_game(cap):
+    global game_state, countdown_start, computer_choice, result, last_game_time
     
     hand = make_hands()
 
