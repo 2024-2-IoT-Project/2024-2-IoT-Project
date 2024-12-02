@@ -23,6 +23,7 @@ def cham_game(cap):
 
     now = time.time()
     direction = None
+    result = None
 
     while cap.isOpened() and time.time() - now < 5:
         ret, frame = cap.read()
@@ -81,6 +82,8 @@ def cham_game(cap):
 
                 computer_choice = random.choice(["Left", "Right"])
                 if direction != computer_choice:
-                    return True
+                    result = True
                 else:
-                    return False
+                    result = False
+
+    return result
