@@ -9,6 +9,15 @@ import random
 SERVER_HOST = '59.187.203.169'  # 서버 IP. 추후 mDNS적용해보기.
 SERVER_PORT = 1234
 
+# 카메라 초기화 (카메라 번호는 기본값 0)
+cap = cv2.VideoCapture(0)
+while not cap.isOpened():
+    cap = cv2.VideoCapture(0)
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)  # 프레임 너비 조정
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 800)  # 프레임 높이 조정
+cap.set(cv2.CAP_PROP_FPS, 15)  # 프레임 속도 조정
+
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((SERVER_HOST, SERVER_PORT))
 print("[INFO] 서버 연결됨.")
@@ -24,12 +33,6 @@ try:
         # if True:
             # TODO 미션을 받은 경우 LED 등을 켜는 등 게임이 가능함을 알려야 하지 않나?
             print("[INFO] 미션 시작 수신")
-
-            # 카메라 초기화 (카메라 번호는 기본값 0)
-            cap = cv2.VideoCapture(0)
-
-            while not cap.isOpened():
-                cap = cv2.VideoCapture(0)
             
             # qr 인식 후 사용자 식별해서 서버에 게임 가능 여부 조회
             player = recognize_qr_code(cap)
