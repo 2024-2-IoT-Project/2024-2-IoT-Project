@@ -135,9 +135,9 @@ def rsp_game(cap):
             image = put_text(image, f"결과: {result}!!", (10, 40), 20, (0, 0, 0))
             
             # 결과 화면 유지
-            cv2.imshow('Rock Scissors Paper', image)
-            cv2.waitKey(1)  # 한 프레임을 출력하기 위해 짧게 대기
-            time.sleep(3)  # 3초 대기
+            # cv2.imshow('Rock Scissors Paper', image)
+            # cv2.waitKey(1)  # 한 프레임을 출력하기 위해 짧게 대기
+            # time.sleep(3)  # 3초 대기
 
             if result == "draw":
                 game_state = "준비"
@@ -147,4 +147,4 @@ def rsp_game(cap):
         if game_state == "준비":
             image = put_text(image, "가위바위보 준비!", (10, 30), 30, (255, 0, 0))
 
-        cv2.imshow('Rock Scissors Paper', image)
+        # cv2.imshow('Rock Scissors Paper', image)
