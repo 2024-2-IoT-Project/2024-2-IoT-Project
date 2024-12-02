@@ -68,6 +68,7 @@ try:
                             client.send(f"MISSION_RESULT: rsp {player} correct".encode())
                         else:
                             client.send(f"MISSION_RESULT: rsp {player} wrong".encode())
+                        break
 
                 else:
                     # 게임 실행 안 함
